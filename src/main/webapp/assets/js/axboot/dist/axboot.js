@@ -1755,19 +1755,39 @@ axboot.gridBuilder = function () {
             };
         }
 
-        gridView.onKeyDown = function (grid, key, ctrl, shift, alt) {
-            if (grid.isEditing && grid.isEditing()) return;
-            if (ctrl || alt) return;
-            if (key < 32 || key > 126) return;
+        function startEditByKey(grid, keyCode) {
+            if (grid.isEditing && grid.isEditing()) return false;
+            if (keyCode === 229) {
+                grid.showEditor();
+                return true;
+            }
+            if (keyCode < 32 || keyCode > 126) return false;
 
             var current = grid.getCurrent();
-            if (!current || current.itemIndex < 0 || !current.fieldName) return;
+            if (!current || current.itemIndex < 0 || !current.fieldName) return false;
 
             var column = grid.columnByName(current.fieldName);
-            if (!column || column.editable !== true) return;
+            if (!column || column.editable !== true) return false;
 
-            grid.setEditValue(String.fromCharCode(key), true);
+            grid.showEditor();
+            grid.setEditValue(String.fromCharCode(keyCode), true);
+            return true;
+        }
+
+        gridView.onKeyDown = function (grid, key, ctrl, shift, alt) {
+            if (ctrl || alt) return;
+            return startEditByKey(grid, key);
         };
+
+        targetEl.setAttribute("tabindex", "0");
+        $(targetEl).off("keydown.axboot-realgrid").on("keydown.axboot-realgrid", function (event) {
+            if (!event) return;
+            if (event.ctrlKey || event.altKey || event.metaKey) return;
+            var keyCode = event.which || event.keyCode;
+            if (startEditByKey(gridView, keyCode)) {
+                event.preventDefault();
+            }
+        });
 
         var wrapper = {
             $target: $(targetEl),
