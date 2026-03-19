@@ -87,7 +87,7 @@ fnObj.gridView01 = axboot.viewExtend(axboot.gridView, {
       frozenColumnIndex: 0,
       sortable: true,
       multipleSelect: true,
-      target: $('[data-ax5grid="grid-view-01"]'),
+      target: $('#grid-view-01'),
       columns: [
         {
           key: 'groupCd',

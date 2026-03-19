@@ -6,6 +6,10 @@
 node_modules
 bower_components
 
+# Ensure local library bundles are versioned for offline deployments
+!src/main/webapp/WEB-INF/lib/
+!src/main/webapp/WEB-INF/lib/**
+
 # Logs
 *.log
 **/[Ll]ogs/*.txt

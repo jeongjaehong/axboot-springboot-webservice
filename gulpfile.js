@@ -1,7 +1,7 @@
 'use strict';
 
 var gulp = require('gulp');
-var sass = require('gulp-sass');
+// Lazy-load gulp-sass in scss tasks to avoid node-sass build during plugin-js.
 var concat = require('gulp-concat');
 var uglify = require('gulp-uglify');
 var changed = require('gulp-changed');
@@ -18,6 +18,12 @@ var sourcemaps = require('gulp-sourcemaps');
 var CONFIG = JSON.parse(fs.readFileSync('config.json', 'utf8'));
 var WEBAPP = CONFIG.webapp;
 var JAVA = CONFIG.java;
+if (!fs.existsSync(WEBAPP)) {
+    WEBAPP = "src/main/webapp";
+}
+if (!fs.existsSync(JAVA)) {
+    JAVA = "src/main/java";
+}
 var ASSETS_SRC = WEBAPP + "/assets";
 var ASSETS = WEBAPP + "/assets";
 var AX5UI_PATH = CONFIG.ax5uiPath;
@@ -68,7 +74,7 @@ gulp.task('plugin-js', function () {
         jss.push(ASSETS_SRC + '/plugins/' + k + '/dist/' + AX5UI_PLUGINS[k] + '.js');
     }
 
-    gulp.src(jss)
+    return gulp.src(jss)
         .pipe(plumber({errorHandler: errorAlert}))
         .pipe(sourcemaps.init())
         .pipe(concat('plugins.js'))
@@ -92,7 +98,7 @@ gulp.task('errorpage-js', function () {
 gulp.task('axboot-js', function () {
     var jss = [ASSETS_SRC + '/js/axboot/src/_axboot.js', ASSETS_SRC + '/js/axboot/src/modules/*.js'];
 
-    gulp.src(jss)
+    return gulp.src(jss)
         .pipe(plumber({errorHandler: errorAlert}))
         .pipe(sourcemaps.init())
         .pipe(concat('axboot.js'))
@@ -150,6 +156,7 @@ gulp.task('axboot-initializr-deploy', function () {
  * SASS
  */
 gulp.task('scss', function () {
+    var sass = require('gulp-sass');
 
     gulp.src(ASSETS_SRC + '/scss/arongi/axboot.scss')
         .pipe(plumber({errorHandler: errorAlert}))
@@ -160,6 +167,7 @@ gulp.task('scss', function () {
 });
 
 gulp.task('scss-ie9', function () {
+    var sass = require('gulp-sass');
 
     gulp.src([
         ASSETS_SRC + '/scss/arongi/axboot-01.scss',
@@ -173,6 +181,7 @@ gulp.task('scss-ie9', function () {
 });
 
 gulp.task('dashboard-scss', function () {
+    var sass = require('gulp-sass');
     gulp.src(ASSETS_SRC + '/plugins/light-bootstrap-dashboard/scss/light-bootstrap-dashboard.scss')
         .pipe(plumber({errorHandler: errorAlert}))
         .pipe(sass({outputStyle: 'compressed'}))

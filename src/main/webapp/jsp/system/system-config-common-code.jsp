@@ -46,7 +46,7 @@
                         <button type="button" class="btn btn-default" data-grid-view-01-btn="delete"><i class="cqc-circle-with-minus"></i> <ax:lang id="ax.admin.delete"/></button>
                     </div>
                 </div>
-                <div data-ax5grid="grid-view-01" data-fit-height-content="grid-view-01" style="height: 300px;"></div>
+                <div id="grid-view-01" data-fit-height-content="grid-view-01" style="height: 300px;"></div>
 
             </ax:split-panel>
         </ax:split-layout>

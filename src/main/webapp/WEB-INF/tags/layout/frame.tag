@@ -27,6 +27,8 @@
         <link rel="stylesheet" type="text/css" href="<c:url value='${css}'/>"/>
     </c:forEach>
     <![endif]-->
+    <link rel="stylesheet" type="text/css" href="<c:url value='/assets/plugins/realgrid2/realgrid-style.css'/>"/>
+    <link rel="stylesheet" type="text/css" href="<c:url value='/assets/css/realgrid-override.css'/>"/>
 
     <script type="text/javascript">
         var CONTEXT_PATH = "<%=ContextUtil.getContext()%>";
@@ -40,8 +42,10 @@
             return json;
         })(${scriptSession});
     </script>
-
     <script type="text/javascript" src="<c:url value='/assets/js/plugins.min.js' />"></script>
+    <script type="text/javascript" src="<c:url value='/assets/plugins/realgrid2/realgrid.2.0.3.min.js' />"></script>
+    <script type="text/javascript" src="<c:url value='/assets/plugins/realgrid2/realgrid-utils.js' />"></script>
+    <script type="text/javascript" src="<c:url value='/assets/plugins/realgrid2/realgrid-license.js' />"></script>
     <script type="text/javascript" src="<c:url value='/assets/js/axboot/dist/axboot.js' />"></script>
     <script type="text/javascript" src="<c:url value='/axboot.config.js' />"></script>
     <jsp:invoke fragment="css"/>

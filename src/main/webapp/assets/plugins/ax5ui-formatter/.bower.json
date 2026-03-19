@@ -1,0 +1,34 @@
+{
+  "name": "ax5ui-formatter",
+  "version": "1.4.127",
+  "description": "A formatter plugin that works with Bootstrap & jQuery",
+  "authors": [
+    "ThomasJ <tom@axisj.com>"
+  ],
+  "main": "dist/ax5formatter.js",
+  "keywords": [
+    "bootstrap",
+    "jquery",
+    "ax5ui",
+    "plugin",
+    "bootstrap jQuery plugins",
+    "formatter",
+    "ax5ui-formatter",
+    "javascript ui"
+  ],
+  "dependencies": {
+    "jquery": "",
+    "ax5core": ">=1.4.115"
+  },
+  "license": "MIT",
+  "homepage": "ax5.io",
+  "_release": "1.4.127",
+  "_resolution": {
+    "type": "version",
+    "tag": "1.4.127",
+    "commit": "55ebf5a1dbda21a49a890af783d130824e2c6982"
+  },
+  "_source": "https://github.com/ax5ui/ax5ui-formatter.git",
+  "_target": ">=1.3.0",
+  "_originalSource": "ax5ui-formatter"
+}

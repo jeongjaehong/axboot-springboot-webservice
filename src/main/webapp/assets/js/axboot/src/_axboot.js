@@ -54,13 +54,15 @@ axboot.init = function () {
                     $this.css({height: _pHeight - _asideHeight});
                 });
 
-                if (ax5.ui.grid_instance) {
-                    for (var gi = 0, gl = ax5.ui.grid_instance.length; gi < gl; gi++) {
-                        var target = ax5.util.findParentNode(ax5.ui.grid_instance[gi].$target.get(0), function (_el) {
+                if (axboot.gridBuilder && axboot.gridBuilder.instances) {
+                    for (var gi = 0, gl = axboot.gridBuilder.instances.length; gi < gl; gi++) {
+                        var gridInstance = axboot.gridBuilder.instances[gi];
+                        if (!gridInstance || !gridInstance.$target) continue;
+                        var target = ax5.util.findParentNode(gridInstance.$target.get(0), function (_el) {
                             return activeTabPanel == _el;
                         });
                         if (target) {
-                            ax5.ui.grid_instance[gi].setHeight(ax5.ui.grid_instance[gi].$target.height());
+                            gridInstance.align();
                         }
                     }
                 }
@@ -142,11 +144,8 @@ axboot.layoutResize = function (_delay) {
     });
 
     function fn(){
-        if (ax5.ui.grid_instance) {
-            var gi = ax5.ui.grid_instance.length;
-            while (gi--) {
-                ax5.ui.grid_instance[gi].setHeight(ax5.ui.grid_instance[gi].$target.height());
-            }
+        if (axboot.gridBuilder && axboot.gridBuilder.alignAll) {
+            axboot.gridBuilder.alignAll();
         }
         if (ax5.ui.mask_instance) {
             var mi = ax5.ui.mask_instance.length;

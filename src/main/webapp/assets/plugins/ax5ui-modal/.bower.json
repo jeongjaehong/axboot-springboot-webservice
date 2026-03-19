@@ -1,0 +1,34 @@
+{
+  "name": "ax5ui-modal",
+  "version": "1.4.127",
+  "authors": [
+    "ThomasJ <tom@axisj.com>"
+  ],
+  "description": "",
+  "main": "dist/ax5modal.js",
+  "keywords": [
+    "bootstrap",
+    "jquery",
+    "ax5ui",
+    "plugin",
+    "bootstrap jQuery plugins",
+    "modal",
+    "ax5ui-modal",
+    "javascript ui"
+  ],
+  "dependencies": {
+    "jquery": "",
+    "ax5core": ">=1.4.115"
+  },
+  "license": "MIT",
+  "homepage": "ax5.io",
+  "_release": "1.4.127",
+  "_resolution": {
+    "type": "version",
+    "tag": "1.4.127",
+    "commit": "eee7f1605167d6183b9421de475a283361a6487b"
+  },
+  "_source": "https://github.com/ax5ui/ax5ui-modal.git",
+  "_target": ">=1.3.0",
+  "_originalSource": "ax5ui-modal"
+}

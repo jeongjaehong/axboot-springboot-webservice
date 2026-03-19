@@ -55,13 +55,15 @@ axboot.init = function () {
                     $this.css({ height: _pHeight - _asideHeight });
                 });
 
-                if (ax5.ui.grid_instance) {
-                    for (var gi = 0, gl = ax5.ui.grid_instance.length; gi < gl; gi++) {
-                        var target = ax5.util.findParentNode(ax5.ui.grid_instance[gi].$target.get(0), function (_el) {
+                if (axboot.gridBuilder && axboot.gridBuilder.instances) {
+                    for (var gi = 0, gl = axboot.gridBuilder.instances.length; gi < gl; gi++) {
+                        var gridInstance = axboot.gridBuilder.instances[gi];
+                        if (!gridInstance || !gridInstance.$target) continue;
+                        var target = ax5.util.findParentNode(gridInstance.$target.get(0), function (_el) {
                             return activeTabPanel == _el;
                         });
                         if (target) {
-                            ax5.ui.grid_instance[gi].setHeight(ax5.ui.grid_instance[gi].$target.height());
+                            gridInstance.align();
                         }
                     }
                 }
@@ -142,11 +144,8 @@ axboot.layoutResize = function (_delay) {
     });
 
     function fn() {
-        if (ax5.ui.grid_instance) {
-            var gi = ax5.ui.grid_instance.length;
-            while (gi--) {
-                ax5.ui.grid_instance[gi].setHeight(ax5.ui.grid_instance[gi].$target.height());
-            }
+        if (axboot.gridBuilder && axboot.gridBuilder.alignAll) {
+            axboot.gridBuilder.alignAll();
         }
         if (ax5.ui.mask_instance) {
             var mi = ax5.ui.mask_instance.length;
@@ -217,6 +216,7 @@ window.onError = function () {
 window.onUnload = function () {
     window.CollectGarbage && window.CollectGarbage();
 };
+
 /**
  * @method axboot.ajax
  * @param {Object} http
@@ -1503,43 +1503,349 @@ axboot.gridBuilder = function () {
         }
     };
 
-    return function (_config) {
-        var myGridConfig = $.extend(true, {}, defaultGridConfig, _config);
+    var textAlignMap = {
+        left: "near",
+        center: "center",
+        right: "far"
+    };
 
-        var convertColumn = function convertColumn(columns) {
+    function normalizeEditor(editor) {
+        if (!editor) return null;
+        if (ax5.util.isString(editor)) {
+            if (editor in axboot.gridBuilder.preDefineEditor) {
+                if (ax5.util.isFunction(axboot.gridBuilder.preDefineEditor[editor])) {
+                    return axboot.gridBuilder.preDefineEditor[editor]();
+                }
+                return $.extend({}, axboot.gridBuilder.preDefineEditor[editor]);
+            }
+            return null;
+        }
+        return $.extend({}, editor);
+    }
 
-            for (var i = 0, l = columns.length; i < l; i++) {
-                if (axboot.gridBuilder.preDefineColumns[columns[i].key]) {
-                    columns[i] = $.extend({}, axboot.gridBuilder.preDefineColumns[columns[i].key], columns[i]);
-                }
-                if (columns[i].columns) {
-                    columns[i].columns = convertColumn(columns[i].columns);
-                }
-                if (ax5.util.isString(columns[i].editor)) {
-                    if (columns[i].editor in axboot.gridBuilder.preDefineEditor) {
-                        if (ax5.util.isFunction(axboot.gridBuilder.preDefineEditor[columns[i].editor])) {
-                            columns[i].editor = axboot.gridBuilder.preDefineEditor[columns[i].editor]();
-                        } else {
-                            columns[i].editor = $.extend({}, axboot.gridBuilder.preDefineEditor[columns[i].editor]);
-                        }
-                    }
-                }
+    function normalizeColumns(columns) {
+        var normalized = [];
+        for (var i = 0, l = columns.length; i < l; i++) {
+            var column = columns[i];
+            if (axboot.gridBuilder.preDefineColumns[column.key]) {
+                column = $.extend({}, axboot.gridBuilder.preDefineColumns[column.key], column);
+            }
 
-                if (columns[i].editor && ax5.util.isString(columns[i].editor.disabled)) {
-                    columns[i].editor.disabled = axboot.gridBuilder.preDefineEditorDisabled[columns[i].editor.disabled];
+            if (column.columns) {
+                column.columns = normalizeColumns(column.columns);
+            }
+
+            if (column.editor) {
+                column.editor = normalizeEditor(column.editor);
+                if (column.editor && ax5.util.isString(column.editor.disabled)) {
+                    column.editor.disabled = axboot.gridBuilder.preDefineEditorDisabled[column.editor.disabled];
                 }
             }
-            return columns;
+            normalized.push(column);
+        }
+        return normalized;
+    }
+
+    function buildFields(columns, fields) {
+        for (var i = 0, l = columns.length; i < l; i++) {
+            var column = columns[i];
+            if (column.columns) {
+                buildFields(column.columns, fields);
+            } else {
+                fields.push({ fieldName: column.key });
+            }
+        }
+    }
+
+    function toRealGridColumn(column) {
+        var align = textAlignMap[column.align] || "near";
+        var rgColumn = {
+            name: column.key,
+            fieldName: column.key,
+            width: column.width || 100,
+            header: { text: column.label || column.key },
+            styles: { textAlignment: align }
         };
 
-        myGridConfig.columns = convertColumn(myGridConfig.columns);
-        myGridConfig.page.onChange = function () {
-            myGridConfig.onPageChange(this.page.selectPage);
+        if (column.formatter) {
+            rgColumn.__axbootFormatter = column.formatter;
+        }
+
+        if (column.editor) {
+            rgColumn.editable = true;
+            if (column.editor.type === "checkbox") {
+                rgColumn.renderer = {
+                    type: "check",
+                    trueValues: column.editor.config ? column.editor.config.trueValue : "Y",
+                    falseValues: column.editor.config ? column.editor.config.falseValue : "N"
+                };
+                rgColumn.editor = { type: "check" };
+            } else if (column.editor.type === "select") {
+                var options = column.editor.config && column.editor.config.options ? column.editor.config.options : [];
+                var keys = column.editor.config && column.editor.config.columnKeys ? column.editor.config.columnKeys : { optionValue: "value", optionText: "text" };
+                var values = [];
+                var labels = [];
+                for (var oi = 0; oi < options.length; oi++) {
+                    values.push(options[oi][keys.optionValue]);
+                    labels.push(options[oi][keys.optionText]);
+                }
+                rgColumn.editor = {
+                    type: "dropdown",
+                    values: values,
+                    labels: labels,
+                    domainOnly: true
+                };
+                rgColumn.lookupDisplay = true;
+            } else if (column.editor.type === "number") {
+                rgColumn.editor = { type: "number" };
+            } else {
+                rgColumn.editor = { type: "text" };
+            }
+
+            if (column.editor.disabled) {
+                rgColumn.__axbootEditorDisabled = column.editor.disabled;
+            }
+        }
+
+        return rgColumn;
+    }
+
+    function buildColumns(columns, list) {
+        for (var i = 0, l = columns.length; i < l; i++) {
+            var column = columns[i];
+            if (column.columns) {
+                buildColumns(column.columns, list);
+            } else {
+                list.push(toRealGridColumn(column));
+            }
+        }
+    }
+
+    function bindFormatters(columns, dataProvider) {
+        for (var i = 0, l = columns.length; i < l; i++) {
+            if (columns[i].__axbootFormatter) {
+                (function (rgColumn) {
+                    var formatter = rgColumn.__axbootFormatter;
+                    rgColumn.displayCallback = function (grid, index, value) {
+                        var item = dataProvider.getJsonRow(index.dataRow);
+                        if (ax5.util.isString(formatter) && axboot.gridBuilder.formatter[formatter]) {
+                            return axboot.gridBuilder.formatter[formatter](value, item);
+                        }
+                        if (ax5.util.isFunction(formatter)) {
+                            return formatter.call({ value: value, item: item, key: rgColumn.fieldName }, value, item);
+                        }
+                        return value;
+                    };
+                })(columns[i]);
+            }
+        }
+    }
+
+    function bindEditorDisabled(gridView, dataProvider, columns) {
+        var disabledMap = {};
+        for (var i = 0, l = columns.length; i < l; i++) {
+            if (columns[i].__axbootEditorDisabled) {
+                disabledMap[columns[i].fieldName] = columns[i].__axbootEditorDisabled;
+            }
+        }
+        if ($.isEmptyObject(disabledMap)) return;
+
+        gridView.onCellEditable = function (grid, index) {
+            var fn = disabledMap[index.fieldName];
+            if (!fn) return true;
+            var item = dataProvider.getJsonRow(index.dataRow);
+            return !fn.call({ item: item, key: index.fieldName });
+        };
+    }
+
+    return function (_config) {
+        var myGridConfig = $.extend(true, {}, defaultGridConfig, _config);
+        myGridConfig.columns = normalizeColumns(myGridConfig.columns || []);
+
+        var targetEl = myGridConfig.target && myGridConfig.target.get ? myGridConfig.target.get(0) : myGridConfig.target;
+        if (!targetEl) return null;
+        if (!targetEl.id) {
+            targetEl.id = "realgrid-" + ax5.getGuid();
+        }
+
+        var gridView = new RealGrid.GridView(targetEl.id);
+        var dataProvider = new RealGrid.LocalDataProvider();
+        gridView.setDataSource(dataProvider);
+
+        var fields = [];
+        buildFields(myGridConfig.columns, fields);
+        dataProvider.setFields(fields);
+
+        var rgColumns = [];
+        buildColumns(myGridConfig.columns, rgColumns);
+        gridView.setColumns(rgColumns);
+
+        bindFormatters(rgColumns, dataProvider);
+        bindEditorDisabled(gridView, dataProvider, rgColumns);
+
+        gridView.setRowIndicator({
+            visible: myGridConfig.showLineNumber,
+            width: myGridConfig.lineNumberColumnWidth
+        });
+        gridView.setCheckBar({
+            visible: myGridConfig.showRowSelector,
+            width: myGridConfig.rowSelectorColumnWidth
+        });
+        gridView.setFixedOptions({
+            colCount: myGridConfig.frozenColumnIndex || 0
+        });
+        if (myGridConfig.sortable) {
+            gridView.setSortingOptions({ enabled: true });
+        }
+        gridView.setEditOptions({
+            editable: true,
+            readOnly: false,
+            insertable: true,
+            appendable: true,
+            updatable: true,
+            deletable: true,
+            commitByCell: true
+        });
+        gridView.setOptions({
+            edit: {
+                editable: true,
+                readOnly: false,
+                insertable: true,
+                appendable: true,
+                updatable: true,
+                deletable: true
+            }
+        });
+        if (gridView.setSelectOptions) {
+            gridView.setSelectOptions({ style: "none" });
+        } else if (gridView.setSelectionOptions) {
+            gridView.setSelectionOptions({ style: "none" });
+        } else {
+            gridView.setOptions({ select: { style: "none" } });
+        }
+        gridView.setDisplayOptions({
+            rowHeight: 30
+        });
+
+        if (typeof setContextMenu === "function") {
+            gridView.onContextMenuPopup = function () {
+                setContextMenu(gridView);
+                return true;
+            };
+            gridView.onContextMenuItemClicked = function (grid, data, index) {
+                if (typeof onContextMenuClick === "function") {
+                    onContextMenuClick(grid, data, index);
+                }
+            };
+        }
+
+        if (myGridConfig.body && ax5.util.isFunction(myGridConfig.body.onClick)) {
+            gridView.onCellClicked = function (grid, clickData) {
+                var itemIndex = clickData.itemIndex;
+                if (itemIndex < 0) return;
+                var context = {
+                    self: wrapper,
+                    dindex: itemIndex,
+                    item: dataProvider.getJsonRow(itemIndex),
+                    list: dataProvider.getJsonRows(0, -1),
+                    column: clickData.fieldName,
+                    value: clickData.value
+                };
+                myGridConfig.body.onClick.call(context);
+            };
+        }
+
+        gridView.onKeyDown = function (grid, key, ctrl, shift, alt) {
+            if (grid.isEditing && grid.isEditing()) return;
+            if (ctrl || alt) return;
+            if (key < 32 || key > 126) return;
+
+            var current = grid.getCurrent();
+            if (!current || current.itemIndex < 0 || !current.fieldName) return;
+
+            var column = grid.columnByName(current.fieldName);
+            if (!column || column.editable !== true) return;
+
+            grid.setEditValue(String.fromCharCode(key), true);
         };
 
-        return new ax5.ui.grid(myGridConfig);
+        var wrapper = {
+            $target: $(targetEl),
+            gridView: gridView,
+            dataProvider: dataProvider,
+            setData: function setData(data) {
+                if (gridView.isEditing && gridView.isEditing()) {
+                    gridView.commit(true);
+                }
+                var list = data && data.list ? data.list : data || [];
+                dataProvider.setRows(list);
+                if (data && data.page) {
+                    this._page = data.page;
+                }
+            },
+            getList: function getList(_type) {
+                if (_type === "modified") {
+                    var states = dataProvider.getAllStateRows();
+                    var rows = (states.created || []).concat(states.updated || []);
+                    return dataProvider.getJsonRows(rows);
+                }
+                if (_type === "deleted") {
+                    var deleted = dataProvider.getAllStateRows().deleted || [];
+                    return dataProvider.getJsonRows(deleted);
+                }
+                return dataProvider.getJsonRows(0, -1);
+            },
+            addRow: function addRow(row, position, options) {
+                dataProvider.addRow(row || {});
+                if (options && options.focus === "END") {
+                    var lastIndex = dataProvider.getRowCount() - 1;
+                    if (lastIndex >= 0) {
+                        gridView.setCurrent({ itemIndex: lastIndex });
+                    }
+                }
+            },
+            deleteRow: function deleteRow(_type) {
+                var rows = [];
+                if (_type === "checked") {
+                    rows = gridView.getCheckedRows();
+                } else {
+                    rows = gridView.getSelectedRows();
+                    if (!rows.length) {
+                        rows = gridView.getCheckedRows();
+                    }
+                }
+                if (rows.length) {
+                    dataProvider.removeRows(rows);
+                }
+            },
+            select: function select(rowIndex, options) {
+                if (options && options.selectedClear) {
+                    gridView.clearSelection();
+                }
+                gridView.setCurrent({ itemIndex: rowIndex });
+                gridView.setSelection({ startItem: rowIndex, endItem: rowIndex });
+            },
+            align: function align() {
+                if (gridView && gridView.resetSize) {
+                    gridView.resetSize();
+                }
+            }
+        };
+
+        axboot.gridBuilder.instances.push(wrapper);
+        return wrapper;
     };
 }();
+
+axboot.gridBuilder.instances = axboot.gridBuilder.instances || [];
+axboot.gridBuilder.alignAll = function () {
+    for (var i = 0, l = axboot.gridBuilder.instances.length; i < l; i++) {
+        var instance = axboot.gridBuilder.instances[i];
+        if (instance && instance.align) {
+            instance.align();
+        }
+    }
+};
 
 axboot.gridBuilder.preDefineColumns = {
     "insDt": { width: 100, label: "등록일", align: "center" },
@@ -1663,30 +1969,31 @@ axboot.gridBuilder.preDefineEditorDisabled = {
     }
 };
 
-ax5.ui.grid.formatter["bizno"] = function () {
-    var val = (this.value || "").replace(/\D/g, "");
-    var regExpPattern = /^([0-9]{3})\-?([0-9]{1,2})?\-?([0-9]{1,5})?.*$/,
-        returnValue = val.replace(regExpPattern, function (a, b) {
-        var nval = [arguments[1]];
-        if (arguments[2]) nval.push(arguments[2]);
-        if (arguments[3]) nval.push(arguments[3]);
-        return nval.join("-");
-    });
-    return returnValue;
-};
-
-ax5.ui.grid.formatter["phone"] = function () {
-    var val = this.value.replace(/\D/g, "");
-    var regExpPattern3 = /^([0-9]{3})\-?([0-9]{1,4})?\-?([0-9]{1,4})?\-?([0-9]{1,4})?\-?([0-9]{1,4})?/,
-        returnValue = val.replace(regExpPattern3, function (a, b) {
-        var nval = [arguments[1]];
-        if (arguments[2]) nval.push(arguments[2]);
-        if (arguments[3]) nval.push(arguments[3]);
-        if (arguments[4]) nval.push(arguments[4]);
-        if (arguments[5]) nval.push(arguments[5]);
-        return nval.join("-");
-    });
-    return returnValue;
+axboot.gridBuilder.formatter = {
+    "bizno": function bizno(value) {
+        var val = (value || "").replace(/\D/g, "");
+        var regExpPattern = /^([0-9]{3})\-?([0-9]{1,2})?\-?([0-9]{1,5})?.*$/,
+            returnValue = val.replace(regExpPattern, function (a, b) {
+            var nval = [arguments[1]];
+            if (arguments[2]) nval.push(arguments[2]);
+            if (arguments[3]) nval.push(arguments[3]);
+            return nval.join("-");
+        });
+        return returnValue;
+    },
+    "phone": function phone(value) {
+        var val = (value || "").replace(/\D/g, "");
+        var regExpPattern3 = /^([0-9]{3})\-?([0-9]{1,4})?\-?([0-9]{1,4})?\-?([0-9]{1,4})?\-?([0-9]{1,4})?/,
+            returnValue = val.replace(regExpPattern3, function (a, b) {
+            var nval = [arguments[1]];
+            if (arguments[2]) nval.push(arguments[2]);
+            if (arguments[3]) nval.push(arguments[3]);
+            if (arguments[4]) nval.push(arguments[4]);
+            if (arguments[5]) nval.push(arguments[5]);
+            return nval.join("-");
+        });
+        return returnValue;
+    }
 };
 
 /**

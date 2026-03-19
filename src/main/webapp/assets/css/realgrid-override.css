@@ -1,0 +1,15 @@
+.rg-focus {
+  border: 1px solid #E56615;
+}
+
+.rg-focus-editing {
+  border: 1px solid #E56615;
+}
+
+.rg-focus-inner {
+  border: none;
+}
+
+.rg-root [class*="rg-selection-handle"] {
+  display: none !important;
+}

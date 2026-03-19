@@ -1,0 +1,37 @@
+{
+  "name": "ax5ui-picker",
+  "version": "1.4.127",
+  "description": "A picker plugin that works with Bootstrap & jQuery",
+  "authors": [
+    "ThomasJ <tom@axisj.com>"
+  ],
+  "main": "dist/ax5picker.js",
+  "keywords": [
+    "bootstrap",
+    "jquery",
+    "ax5ui",
+    "plugin",
+    "bootstrap jQuery plugins",
+    "picker",
+    "ax5ui-picker",
+    "javascript ui"
+  ],
+  "dependencies": {
+    "jquery": "",
+    "ax5core": ">=1.4.115",
+    "ax5ui-calendar": "",
+    "ax5ui-formatter": "",
+    "ax5ui-palette": ""
+  },
+  "license": "MIT",
+  "homepage": "ax5.io",
+  "_release": "1.4.127",
+  "_resolution": {
+    "type": "version",
+    "tag": "1.4.127",
+    "commit": "626c0ec80430923ffefdfd1cdff03082052f2bcc"
+  },
+  "_source": "https://github.com/ax5ui/ax5ui-picker.git",
+  "_target": ">=1.3.0",
+  "_originalSource": "ax5ui-picker"
+}
