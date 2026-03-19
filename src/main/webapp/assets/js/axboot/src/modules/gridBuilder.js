@@ -252,7 +252,9 @@ axboot.gridBuilder = (function () {
             appendable: true,
             updatable: true,
             deletable: true,
-            commitByCell: true
+            commitByCell: true,
+            editWhenFocused: true,
+            editWhenClickFocused: true
         });
         gridView.setOptions({
             edit: {
@@ -318,11 +320,27 @@ axboot.gridBuilder = (function () {
             if (!column || column.editable !== true) return false;
 
             grid.showEditor();
-            grid.setEditValue(String.fromCharCode(keyCode), true);
+            setTimeout(function () {
+                grid.setEditValue(String.fromCharCode(keyCode), true);
+            }, 0);
             return true;
         }
 
         gridView.onKeyDown = function (grid, key, ctrl, shift, alt) {
+            if (grid.isEditing && grid.isEditing()) {
+                if (key === 38 || key === 40) {
+                    var current = grid.getCurrent();
+                    if (!current || current.itemIndex < 0 || !current.fieldName) return;
+                    var rowCount = dataProvider.getRowCount();
+                    var nextIndex = key === 38 ? current.itemIndex - 1 : current.itemIndex + 1;
+                    if (nextIndex < 0 || nextIndex >= rowCount) return;
+                    grid.commit(true);
+                    grid.setCurrent({itemIndex: nextIndex, fieldName: current.fieldName});
+                    grid.showEditor();
+                    return true;
+                }
+                return;
+            }
             if (ctrl || alt) return;
             return startEditByKey(grid, key);
         };
