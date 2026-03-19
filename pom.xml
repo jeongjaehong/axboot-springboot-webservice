@@ -946,6 +946,13 @@
         </dependency>
         <dependency>
             <groupId>local.lib</groupId>
+            <artifactId>mssql-jdbc-12.4.2.jre8</artifactId>
+            <version>0</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/src/main/webapp/WEB-INF/lib/mssql-jdbc-12.4.2.jre8.jar</systemPath>
+        </dependency>
+        <dependency>
+            <groupId>local.lib</groupId>
             <artifactId>jul-to-slf4j-1.7.25</artifactId>
             <version>0</version>
             <scope>system</scope>
